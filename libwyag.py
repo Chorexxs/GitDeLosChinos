@@ -33,11 +33,10 @@ def main(argv=sys.argv[1:]):
         case "show-ref": cmd_show_ref(args)
         case "status": cmd_status(args)
         case "tag": cmd_tag(args)
-        case _: print(f"Comando no válido")
+        case _: print("Comando no válido")
 
 
-class GitRepository:
-    (object):
+class GitRepository(object):
     """Representa un repositorio de Git."""
 
     worktree = None
@@ -95,3 +94,51 @@ def repo_dir(repo, *path, mkdir=False):
         return path
     else:
         return None
+
+
+def repo_create(path):
+    """Crea un nuevo repositorio en path."""
+
+    repo = GitRepository(path, True)
+
+    # Primero se asegura que el path o no existe o es un dir vacío
+
+    if os.path.exists(repo.worktree):
+        if not os.path.isdir(repo.worktree):
+            raise Exception(f"{path} no es un directorio")
+        if os.path.exists(repo.gitdir) and os.listdir(repo.gitdir):
+            raise Exception(f"{path} no es un directorio vacío")
+    else:
+        os.makedirs(repo.worktree)
+
+    assert repo_dir(repo, "branches", mkdir=True)
+    assert repo_dir(repo, "objects", mkdir=True)
+    assert repo_dir(repo, "refs", "tags", mkdir=True)
+    assert repo_dir(repo, "refs", "heads", mkdir=True)
+
+    # .git/description es un archivo de texto que describe el repositorio
+    with open(repo_file(repo, "descripción"), "w") as f:
+        f.write(
+            "repositorio sin nombre; edita el archivo 'descripción' para cambiarlo\n")
+
+    # .git/HEAD es un archivo de texto que contiene la referencia a la rama actual
+    with open(repo_file(repo, "HEAD"), "w") as f:
+        f.write("ref: refs/heads/master\n")
+
+    with open(repo_file(repo, "config"), "w") as f:
+        config = repo_default_config()
+        config.write(f)
+
+    return repo
+
+
+def repo_default_config():
+    """Devuelve la configuración por defecto del repositorio."""
+    ret = configparser.ConfigParser()
+
+    ret.add_section("core")
+    ret.set("core", "repositoryformatversion", "0")
+    ret.set("core", "filemode", "fasle")
+    ret.set("core", "bare", "false")
+
+    return ret
