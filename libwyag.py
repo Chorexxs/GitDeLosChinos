@@ -70,3 +70,28 @@ class GitRepository:
 def repo_path(repo, *path):
     """Calcula la ruta absoluta de un archivo en el repositorio."""
     return os.path.join(repo.gitdir, *path)
+
+
+def repo_file(repo, *path, mkdir=False):
+    """Lo mismo que repo_path, pero crea el directorio *path si no existe."""
+
+    if repo_dir(repo, *path[:-1], mkdir=mkdir):
+        return repo_path(repo, *path)
+
+
+def repo_dir(repo, *path, mkdir=False):
+    """Lo mismo que repo_path, pero para directorios."""
+
+    path = repo_path(repo, *path)
+
+    if os.path.exists(path):
+        if (os.path.isdir(path)):
+            return path
+        else:
+            raise Exception(f"No es un directorio {path}")
+
+    if mkdir:
+        os.makedirs(path)
+        return path
+    else:
+        return None
