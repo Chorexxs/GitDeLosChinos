@@ -35,6 +35,9 @@ def main(argv=sys.argv[1:]):
         case "tag": cmd_tag(args)
         case _: print("Comando no válido")
 
+# EL OBJETO REPOSITORIO
+# El objeto repositorio representa un repositorio de Git.
+
 
 class GitRepository(object):
     """Representa un repositorio de Git."""
@@ -142,3 +145,19 @@ def repo_default_config():
     ret.set("core", "bare", "false")
 
     return ret
+
+# EL COMANDO INIT
+
+
+argsp = argsubparsers.add_parser(
+    "init", help="Inicia un nuevo reporsitorio vacío")
+
+argsp.add_argument("path",
+                   metavar="directorio",
+                   nargs="?",
+                   default=".",
+                   help="Donde crear el repositorio.")
+
+
+def cmd_init(*args):
+    repo_create(args.path)
