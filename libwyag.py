@@ -207,3 +207,39 @@ class GitObject(object):
 
     def init(self):
         pass
+
+
+def object_read(repo, sha):
+    """Lee un objeto de Git a partir de su SHA-1
+    Devuelve un GitObject que su tipo depende del objeto"""
+
+    path = repo_file(repo, "objects", sha[0:2], sha[2:])
+
+    if not os.path.isfile(path):
+        return None
+
+    with open(path, "rb") as f:
+        raw = zlib.decompress(f.read())
+
+        # Lee el tipo de objeto
+        x = raw.find(b" ")
+        fmt = raw[0:x]
+
+        # Lee y valida el tamaño del objeto
+        y = raw.find(b"\x00", x)
+        size = int(raw[x:y].decode("ascii"))
+        if size != len(raw)-y-1:
+            raise Exception(f"Error de tamaño en el objeto {sha}")
+
+        # Elige el constructor adecuado
+        match fmt:
+            case b"commit": c = GitCommit
+            case b"tree": c = GitTree
+            case b"tag": c = GitTag
+            case b"blob": c = GitBlob
+            case _:
+                raise Exception(
+                    f"Tipo desconocido {fmt.decode('ascii')} para el objeto {sha}")
+
+        # Llama al constructor y devuelve el objeto
+        return c(raw[y+1:])
