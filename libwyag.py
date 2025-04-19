@@ -180,3 +180,30 @@ def repo_find(path=".", required=True):
             return None
 
     return repo_find(parent, required)
+
+# LA CLASE OBJECT
+
+
+class GitObject(object):
+    """Representa un objeto de Git"""
+
+    def __init__(self, data=None):
+        if data != None:
+            self.deserialize(data)
+        else:
+            self.init()
+
+    def serialize(self, repo):
+        """Esta función DEBE ser implementada por las sublcases
+
+        debe leer el contenido del objeto de self.data, la cadena d bytes y hacer
+        lo que sea necesario para convertirlo en una representación significativa
+        """
+
+        raise Exception("No implementada!")
+
+    def deserialize(self, data):
+        raise Exception("No implementada!")
+
+    def init(self):
+        pass
