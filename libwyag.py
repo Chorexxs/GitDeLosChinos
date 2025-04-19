@@ -164,4 +164,19 @@ def cmd_init(*args):
 
 # LA FUNCIÓN repo_find()
 
-# Probando linuxx xdd
+
+def repo_find(path=".", required=True):
+    path = os.path.realpath(path)
+
+    if os.path.isdir(os.path.join(path, ".git")):
+        return GitRepository(path)
+
+    parent = os.path.realpath(os.path.join(path, ".."))
+
+    if parent == path:
+        if required:
+            raise Exception("No se encontró el repositorio")
+        else:
+            return None
+
+    return repo_find(parent, required)
