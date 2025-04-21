@@ -243,3 +243,32 @@ def object_read(repo, sha):
 
         # Llama al constructor y devuelve el objeto
         return c(raw[y+1:])
+
+
+def object_write(obj, repo=None):
+    # serializa los datos del objeto
+    data = obj.serialize()
+    # agrega el encabezado
+    result = obj.fmt + b" " + str(len(data)).encode() + b"\x00" + data
+    # calcula el hash
+    sha = hashlib.sha1(result).hexdigest()
+
+    if repo:
+        # calcula la ruta
+        path = repo_file(repo, "objects", sha[0:2], sha[2:], mkdir=True)
+
+        if not os.path.exists(path):
+            with open(path, "wb") as f:
+                # comprime y escribe el objeto
+                f.write(zlib.compress(result))
+    return sha
+
+
+class GitBlob(GitObject):
+    fmt = b"blob"
+
+    def serialize(self):
+        return self.blobdata
+
+    def deserialize(self, data):
+        self.blobdata = data
