@@ -272,3 +272,78 @@ class GitBlob(GitObject):
 
     def deserialize(self, data):
         self.blobdata = data
+
+# EL COMANDO cat-file
+
+
+argsp = argsubparsers.add_parser("cat-file",
+                                 help="Muestra contenido de los objetos del repositorio")
+
+argsp.add_argument("type",
+                   metavar="type",
+                   choices=["blob", "commit", "tag", "tree"],
+                   help="Especifica el tipo de objeto")
+
+argsp.add_argument("object",
+                   metavar="object",
+                   help="El objeto a mostrar")
+
+
+def cmd_cat_file(args):
+    repo = repo_find()
+    cat_file(repo, args.object, fmt=args.type.encode())
+
+
+def cat_file(repo, obj, fmt=None):
+    obj = object_read(repo, object_find(repo, obj, fmt=fmt))
+    sys.stdout.buffer.write(obj.serialize())
+
+
+def object_find(repo, name, fmt=None, follow=True):
+    return name
+
+
+argsp = argsubparsers.add_parser("hash-object",
+                                 help="Calcula el ID de un objeto y crea un "
+                                 "blob de un archivo")
+
+argsp.add_argument("-t",
+                   metavar="type",
+                   dest="type",
+                   choices=["blob", "commit", "tag", "tree"],
+                   default="blob",
+                   help="Especifica el tipo de objeto")
+
+argsp.add_argument("-w",
+                   dest="write",
+                   action="store_true",
+                   help="Escribe el objeto dentro de la base de datos")
+
+argsp.add_argument("path",
+                   help="Lee el archivo desde <file>")
+
+
+def fcmd_hash_object(args):
+    if args.write:
+        repo = repo_find()
+    else:
+        repo = None
+
+    with open(args.path, "rb") as fd:
+        sha = object_hash(fd, args.type.encode(), repo)
+        print(sha)
+
+
+def object_hash(fd, fmt, repor=None):
+    """Objeto hash, escrito en el repo si se provee"""
+    data = fd.read()
+
+    # Elige el constructor de acuerdo al argumento fmt
+    match fmt:
+        case b"commit": obj = GitCommit(data)
+        case b"tree": obj = GitTree(data)
+        case b"tag": obj = GitTag(data)
+        case b"blob": obj = GitBlob(data)
+        case _ = rasie Exception(f"Tipo desconocido {fmt}!")
+
+    return object_write(obj, repo)
