@@ -413,3 +413,52 @@ class GitCommit(GitObject):
 
     def init(self):
         self.kvlm = dict()
+
+# El COMANDO log
+
+
+argsp = argsubparsers.add_parser("log",
+                                 help="Muestra el historial de commits")
+argsp.add_argument("commit",
+                   default="HEAD",
+                   nargs="?",
+                   help="Commit a partir del cual se inicia la visualización")
+
+
+def cmd_log(args):
+    repo = repo_find()
+
+    print("digraph wyaglog{")
+    print(" node [shape=rect]")
+    log_graphviz(repo, object_find(repo, args.commit), set())
+    print("}")
+
+
+def log_graphviz(repo, sha, seen):
+    if sha in seen:
+        return
+    seen.add(sha)
+
+    commit = object_read(repo, sha)
+    message = commit.kvlm[None].decode("utf-8").strip()
+    message = message.replace("\\", "\\\\")
+    message = message.replace('\"', '\\\"')
+
+    if "\n" in message:
+        message = message[:message.index("\n")]
+
+    print(f" c_{sha} [label=\" {sha[0:7]}: {message}\"]")
+    assert commit.fmt == b"commit"
+
+    if not b"parent" in commit.kvlm.keys():
+        return
+
+    parents = commit.kvlm[b"parent"]
+
+    if type(parents) != list:
+        parents = [parents]
+
+    for p in parents:
+        p = p.decode("ascii")
+        print(f" c_{sha} -> c_{p};")
+        log_graphviz(repo, p, seen)
