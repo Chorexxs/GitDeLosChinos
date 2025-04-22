@@ -398,3 +398,18 @@ def kvlm_serialize(kvlm):
     ret += b"\n" + kvlm[None]
 
     return ret
+
+# EL OBJETO COMMIT
+
+
+class GitCommit(GitObject):
+    fmt = b"commit"
+
+    def deserialize(self, data):
+        self.kvlm = kvlm_parse(data)
+
+    def serialize(self, repo):
+        return kvlm_serialize(self.kvlm)
+
+    def init(self):
+        self.kvlm = dict()
