@@ -530,3 +530,42 @@ class GitTree(GitObject):
 
     def init(self):
         self.items = list()
+
+# EL COMANDO ls-tree
+
+
+argsp = argsubparsers.add_parser("ls-tree",
+                                 help="Muestra el contenido de un árbol")
+argsp.add_argument("-r",
+                   dest="recursive",
+                   action="store_true",
+                   help="Muestra el contenido de los subárboles")
+argsp.add_argument("tree",
+                   help="El árbol a mostrar")
+
+
+def cmd_ls_tree(args):
+    repo = repo_find()
+    ls_tree(repo, args.tree, args.recursive)
+
+
+def ls_tree(repo, ref, recursive=None, prefix=""):
+    sha = object_find(repo, ref, fmt=b"tree")
+    obj = object_read(repo, sha)
+    for item in obj.items:
+        if len(item.mode) == 5:
+            type == item.mode[0:1]
+        else:
+            type = item.mode[0:2]
+
+        match type:  # Determina el tipo
+            case b"04": type = "tree"
+            case b"10": type = "blob"  # Un archivo regular
+            case b"12": type = "blob"  # Un archivo simbólico
+            case b"16": type = "commit"  # Un submódulo
+            case _: raise Exception(f"Tipo desconocido {item.mode}")
+
+        if not (recursive and type == "tree"):
+            print(f"{'0' * (6 - len(item.mode)) + item.mode.decode('ascii')} {type} {item.sha}\t{os.path.join(prefix, item.path)}")
+        else:
+            ls_tree(repo, item.sha, recursive, os.path.join(prefix, item.path))
