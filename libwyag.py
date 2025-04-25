@@ -662,3 +662,71 @@ def show_ref(repo, refs, with_hash=True, prefix=""):
             print(f"{prefix}{k}")
         else:
             show_ref(repo, v, with_hash=with_hash, prefix=f"{prefix}{k}")
+
+# Tag ligeras, objetos de tag y analisis de tags
+
+
+class GitTag(GitCommit):
+    fmt = b"tag"
+
+# EL COMANDO tag
+
+# git tag -> Enlista todos los tags
+# git tag NAME [OBJECT] -> Crea un tag ligero
+# git tag -a NAME [OBJECT] -> Crea un tag *objeto*
+
+
+argsp = argsubparsers.add_parser("tag",
+                                 help="Crea y enlista tags")
+
+argsp.add_argument("-a",
+                   action="store_true",
+                   dest="create_tag_object",
+                   help="Crea un objeto de tag")
+
+argsp.add_argument("name",
+                   nargs="?",
+                   help="Nombre del tag que se va a crear")
+
+argsp.add_argument("object",
+                   default="HEAD",
+                   nargs="?",
+                   help="El objeto al que se le asigna el tag")
+
+
+def cmd_tag(args):
+    repo = repo_find()
+
+    if args.name:
+        tag_create(repo,
+                   args.name,
+                   args.object,
+                   create_tag_object=args.create_tag_object)
+    else:
+        refs = ref_list(repo)
+        show_ref(repo, refs["tags"], with_hash=False)
+
+
+def tag_create(repo, name, ref, create_tag_object=False):
+    # Obtiene el GitObject de la referencia
+    sha = object_find(repo, ref)
+
+    if create_tag_object:
+        # Crea el objeto de tag
+        tag = GitTag()
+        tag.kvlm = dict()
+        tag.kvlm[b"object"] = sha.encode()
+        tag.kvlm[b"type"] = b"commit"
+        tag.kvlm[b"tag"] = name.encode()
+
+        tag.kvlm[b"tagger"] = b"wyaf <wyag@ejemplo.com>"
+        tag.kvlm[None] = b"Tag creado por wyag"
+        tag_sha = object_write(tag, repo)
+        ref_create(repo, "tags/" + name, tag_sha)
+    else:
+        ref_create(repo, "tags/" + name, sha)
+
+
+def ref_create(repo, ref_name, sha):
+    with open(repo_file(repo, "refs/" + ref_name), "w") as fp:
+        fp.write(sha + "\n")
