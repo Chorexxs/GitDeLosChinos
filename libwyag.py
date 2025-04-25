@@ -569,3 +569,50 @@ def ls_tree(repo, ref, recursive=None, prefix=""):
             print(f"{'0' * (6 - len(item.mode)) + item.mode.decode('ascii')} {type} {item.sha}\t{os.path.join(prefix, item.path)}")
         else:
             ls_tree(repo, item.sha, recursive, os.path.join(prefix, item.path))
+
+# EL COMANDO checkout
+
+
+argsp = argsubparsers.add_parser("checkout",
+                                 help="Checkout de un commit dentro de un directorio")
+
+argsp.add_argument("commit",
+                   help="El commit o tree a hacer checkout")
+
+argsp.add_argument("path",
+                   help="El directorio vacío donde hacer el checkout")
+
+
+def cmd_checkout(args):
+    repo = repo_find()
+
+    obj = object_read(repo, object_find(repo, args.commit))
+
+    # Si el objeto es un commit, botiene el tree
+    if obj.fmt == b"commit":
+        obj = object_read(repo, obj.kvlm[b"tree"].decode("ascii"))
+
+    # Verifica que el path sea un directorio vacío
+    if os.path.exists(args.path):
+        if not os.path.isdir(args.path):
+            raise Exception(f"{args.path} no es un directorio")
+        if os.listdir(args.path):
+            raise Exception(f"{args.path} no es un directorio vacío")
+    else:
+        os.makedirs(args.path)
+
+    tree_checkout(repo, obj, os.path.realpath(args.path))
+
+
+def tree_checkout(repo, tree, path):
+    for item in tree.items:
+        obj = object_read(repo, item.sha)
+        dest = os.path.join(path, item.path)
+
+        if obj.fmt == b"tree":
+            os.mkdir(dest)
+            tree_checkout(repo, obj, dest)
+        elif obj.fmt == b"blob":
+            # Soporta symlinks
+            with open(dest, "wb") as f:
+                f.write(obj.blobdata)
