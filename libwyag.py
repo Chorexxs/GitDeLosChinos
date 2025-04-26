@@ -796,3 +796,30 @@ def object_find(repo, name, fmt=None, follow=True):
             sha = obj.kvlm[b"tree"].decode("ascii")
         else:
             return None
+
+# EL COMANDO rev-parse
+
+
+argsp = argsubparsers.add_parser("rev-parse",
+                                 help="Analizar identificadores de revisiones (u otros objetos)")
+
+argsp.add_argument("--wyaf-type",
+                   metavar="type",
+                   dest="type",
+                   choices=["blob", "commit", "tag", "tree"],
+                   default=None,
+                   help="Especifica el tipo de objeto")
+
+argsp.add_argument("name",
+                   help="El objeto a analizar")
+
+
+def cmd_rev_parse(args):
+    if args.type:
+        fmt = args.type.encode()
+    else:
+        fmt = None
+
+    repo = repo_find()
+
+    print(object_find(repo, args.name, fmt, follow=True))
