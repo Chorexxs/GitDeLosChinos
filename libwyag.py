@@ -730,3 +730,69 @@ def tag_create(repo, name, ref, create_tag_object=False):
 def ref_create(repo, ref_name, sha):
     with open(repo_file(repo, "refs/" + ref_name), "w") as fp:
         fp.write(sha + "\n")
+
+# LA FUNCIÓN object_find
+
+
+def object_resolve(repo, name):
+    """Resuelve un nombre a un objeto hash."""
+    candidates = list()
+    hashRE = re.compile(r"^[0-9A-Fa-f]{4,40}$")
+
+    if not name.strip:
+        return None
+
+    if name == "HEAD":
+        return [ref_resolve(repo, "HEAD")]
+
+    if hashRE.match(name):
+        name = name.lower()
+        prefix = name[0:2]
+        path = repo_dir(repo, "objects", prefix, mkdir=False)
+        if path:
+            rem = name[2:]
+            for f in os.listdir(path):
+                if f.startswith(rem):
+                    candidates.append(prefix + f)
+
+    as_tag = ref_resolve(repo, "refs/tags/" + name)
+    if as_tag:
+        candidates.append(as_tag)
+
+    as_branch = ref_resolve(repo, "refs/heads/" + name)
+    if as_branch:
+        candidates.append(as_branch)
+
+    return candidates
+
+
+def object_find(repo, name, fmt=None, follow=True):
+    sha = object_resolve(repo, name)
+
+    if not sha:
+        raise Exception(f"Referencia no válida: {name}")
+
+    if len(sha) > 1:
+        raise Exception(
+            f"Referencia ambigua {name}: Los candidatos son:\r - {'\n - '.join(sha)}.")
+
+    sha = sha[0]
+
+    if not fmt:
+        return sha
+
+    while True:
+        obj = object_read(repo, sha)
+
+        if obj.fmt == fmt:
+            return sha
+
+        if not follow:
+            return None
+
+        if obj.fmt == b"tag":
+            sha = obj.kvlm[b"object"].decode("ascii")
+        elif obj.fmt == b"commit" and fmt == b"tree":
+            sha = obj.kvlm[b"tree"].decode("ascii")
+        else:
+            return None
