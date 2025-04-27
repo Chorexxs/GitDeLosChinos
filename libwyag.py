@@ -823,3 +823,36 @@ def cmd_rev_parse(args):
     repo = repo_find()
 
     print(object_find(repo, args.name, fmt, follow=True))
+
+# ANALIZAR EL INDEX
+
+
+class GitIndexEntry(object):
+    def __init__(self, ctime=None, mtime=None, dev=None, ino=None,
+                 mode_type=None, mode_perms=None, uid=None, gid=None,
+                 fsize=None, sha=None, flag_assume_valid=None,
+                 flag_stage=None, name=None):
+        # La ultima modificación de los metadatos del archivo
+        self.ctime = ctime
+        # La ultima modificación de los datos del archivo
+        self.mtime = mtime
+        # El ID del dispositivo
+        self.dev = dev
+        # El número de inodo
+        self.ino = ino
+        # El tipo de objeto. b1000 (regular), b1010 (symlink), b1100 (gitlink)
+        self.mode_type = mode_type
+        # Los permisos del objeto
+        self.mode_perms = mode_perms
+        # El ID del propietario
+        self.uid = uid
+        # El ID del grupo
+        self.gid = gid
+        # El tamaño del objeto, en bytes
+        self.fsize = fsize
+        # El SHA-1 del objeto
+        self.sha = sha
+        self.flag_assume_valid = flag_assume_valid
+        self.flag_stage = flag_stage
+        # El nombre del objeto (el path completo)
+        self.name = name
