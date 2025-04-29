@@ -978,3 +978,53 @@ def cmd_ls_files(args):
                 f"Usuario: {pwd.getpwuid(e.uid).pw_name} ({e.uid} grupo: {grp.getgrgid(e.gid).gr_name} ({e.gid}))")
             print(
                 f"flags: stage={e.flag_stage} assume_valid={e.flag_assume_valid}")
+
+# EL COMANDO check-ignore
+
+
+argsp = argsubparsers.add_parser("check-ignore",
+                                 help="Verifica rutas contra las reglas de ignorados")
+
+argsp.add_argument("path",
+                   nargs="+",
+                   help="Rutas a verificar")
+
+
+def cmd_check_ignore(args):
+    repo = repo_find()
+    rules = gitignore_read(repo)
+    for path in args.path:
+        if check_ignore(rules, path):
+            print(path)
+
+
+def gitignore_parse1(raw):
+    raw = raw.strip()
+
+    if not raw or raw[0] == "#":
+        return None
+    elif raw[0] == "!":
+        return (raw[1:], False)
+    elif raw[0] == "\\":
+        return (raw[1:], True)
+    else:
+        return (raw, True)
+
+
+def gitignore_parse(lines):
+    ret = list()
+
+    for line in lines:
+        parsed = gitignore_parse1(line)
+        if parsed:
+            ret.append(parsed)
+    return ret
+
+
+class GitIgnore(object):
+    absolute = None
+    scoped = None
+
+    def __init__(self, absolute, scoped):
+        self.absolute = absolute
+        self.scoped = scoped
