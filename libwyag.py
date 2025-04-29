@@ -945,3 +945,36 @@ def index_read(repo):
                                      name=name))
 
     return GitIndex(version=version, entries=entries)
+
+# EL COMANDO ls-files
+
+
+argsp = argsubparsers.add_parser("ls-files",
+                                 help="Lista todos los archivos")
+
+argsp.add_argument("--verbose",
+                   action="store_true",
+                   help="Lo muestra todo")
+
+
+def cmd_ls_files(args):
+    repo = repo_find()
+    index = index_read(repo)
+    if args.verbose:
+        print(
+            f"Formato del archivo en el Index v{index.version}, contiene {len(index.entries)} entradas")
+
+    for e in indec.entries:
+        print(e.name)
+        if args.verbose:
+            entry_type = {0b1000: "regular",
+                          0b1010: "symlink",
+                          0b1110: "git link"}[e.mode_type]
+            print(f"{entry_type} con permisos: {e.mode_perms:o}")
+            print(f"En blob: {e.sha}")
+            print(f"Creado {datetime.fromtimestamp(e.ctime[0])}.{e.ctime[1]}, modificado: {datetime.fromtimestamp(e.mtime[0])}.{e.mtime{1}}")
+            print(f"Dispositivo: {e.dev}, inodo: {e.ino}")
+            print(
+                f"Usuario: {pwd.getpwuid(e.uid).pw_name} ({e.uid} grupo: {grp.getgrgid(e.gid).gr_name} ({e.gid}))")
+            print(
+                f"flags: stage={e.flag_stage} assume_valid={e.flag_assume_valid}")
