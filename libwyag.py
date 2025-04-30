@@ -1101,3 +1101,41 @@ def check_ignore(rules, path):
     return check_ignore_absolute(rules.absolute, path)
 
 # EL COMANDO status
+
+
+argsp = argsubparsers.add_parser("status",
+                                 help="Muestra el estado del repositorio")
+
+
+def cmd_status(_):
+    repo = repo_find()
+    index = index_read(repo)
+
+    cmd_status_branch(repo)
+    cmd_status_head_index(repo, index)
+    print()
+    cmd_status_index_worktree(repo, index)
+
+# branch activa
+
+
+def branch_get_active(repo):
+    with open(repo_file(repo, "HEAD"), "r") as f:
+        head = f.read()
+
+    if head.startswith("ref: refs/heads/"):
+        return (head[16:-1])
+    else:
+        return False
+
+
+def branch_status_branch(repo):
+    branch = branch_get_active(repo)
+    if branch:
+        print(f"En la rama {branch}.")
+    else:
+        print(f"HEAD está separado en {object_find(repo, 'HEAD')}")
+
+# Cambios entre HEAD y el index
+
+# 8.5.2
