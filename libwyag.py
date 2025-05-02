@@ -1270,3 +1270,53 @@ def index_write(repo, index):
                 idx += pad
 
 # EL COMANDO rm
+
+
+argsp = argsubparsers.add_parser("rm",
+                                 help="Elimina archivos del index y del directorio de trabajo")
+argsp.add_argument("path",
+                   nargs="+",
+                   help="Archivos a eliminar")
+
+
+def cmd_rm(args):
+    repo = repo_find()
+    rm(repo, args.path)
+
+
+def rm(repo, paths, delete=True, skip_missing=False):
+    index = index_read(repo)
+
+    worktree = repo.worktree + os.sep
+
+    abspaths = set()
+    for path in paths:
+        abspath = os.path.abspath(path)
+        if abspath.startswith(worktree):
+            abspaths.add(abspath)
+        else:
+            raise Exception(
+                f"No se puede eliminar {paths} fuera del directorio de trabajo")
+
+    kept_entries = list()
+    remove = list()
+
+    for e in index.entries:
+        full_path = os.path.join(repo.worktree, e.name)
+
+        if full_path in abspaths:
+            remove.append(full_path)
+            abspaths.remove(full_path)
+        else:
+            kept_entries.append(e)
+
+    if len(abspaths) > 0 and not skip_missing:
+        raise Exception(
+            f"No se pueden eliminar paths que no están en el index: {abspaths}")
+
+    if delete:
+        for path in remove:
+            os.unlink(path)
+
+    index.entries = kept_entries
+    index_write(repo, index)
