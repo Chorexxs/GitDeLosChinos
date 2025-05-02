@@ -1172,3 +1172,51 @@ def cmd_status_head_index(repo, index):
         print(f" Eliminado: ", entry)
 
 # Cambios entre index y worktree
+
+
+def cmd_status_index_worktree(repo, index):
+    print("Cambios no preparados para el commit")
+
+    ignore = gitignore_read(repo)
+
+    gitdir_prefix = repo.gitdir + os.path.sep
+
+    all_files = list()
+
+    for (root, _, files) in os.walk(repo.worktree, True):
+        if root == repo.gitdir or root.startswith(gitdir_prefix):
+            continue
+        for f in files:
+            full_path = os.path.join(root, f)
+            rel_path = os.path.relpath(full_path, repo.worktree)
+            all_files.append(rel_path)
+
+    for entry in index.entries:
+        full_path = os.path.join(repo.worktree, entry.name)
+
+        if not os.path.exsists(full_path):
+            print(f" Eliminado: ", entry.name)
+        else:
+            stat = os.stat(full_path)
+
+            ctime_ns = entry.ctime[0] * 10**9 + entry.ctime[1]
+            mtime_ns = entry.mtime[0] * 10**9 + entry.mtime[1]
+            if (stat.st_ctime_ns != ctime_ns) or (stat.st_mtime_ns != mtime_ns):
+                with open(full_path, "rb") as fd:
+                    new_sha = object_hash(fd, b"blob", None)
+                    same = entry.sha == new_sha
+
+                    if not same:
+                        print(f" Modificado: ", entry.name)
+
+        if entry.name in all_files:
+            all_files.remove(entry.name)
+
+    print()
+    print("Archivos no rastreados")
+
+    for f in all_files:
+        if not check_ignore(ignore, f):
+            print(" ", f)
+
+# Preparar y confirmar cambios (staging and committing)
