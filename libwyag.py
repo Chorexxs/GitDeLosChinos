@@ -1138,4 +1138,37 @@ def branch_status_branch(repo):
 
 # Cambios entre HEAD y el index
 
-# 8.5.2
+
+def tree_to_dict(repo, ref, prefix=""):
+    ret = dict()
+    tree_sha = object_find(repo, ref, fmt=b"tree")
+    tree = object_read(repo, tree_sha)
+
+    for leaf in tree.items:
+        full_path = os.path.join(prefix, leaf.path)
+
+        is_subtree = leaf.mode.startswith(b"04")
+
+        if is_subtree:
+            ret.update(tree_to_dict(repo, leaf.sha, full_path))
+        else:
+            ret[full_path] = leaf.sha
+    return ret
+
+
+def cmd_status_head_index(repo, index):
+    print("Cambios para ser confirmados")
+
+    head = tree_to_dict(repo, "HEAD")
+    for entry in index.entries:
+        if entry.name in head:
+            if head[entry.name] != entry.sha:
+                print(f" modificado:", entry.name)
+            del head[entry.name]
+        else:
+            print(f" Añadiddo: ", entry.name)
+
+    for entry in head.keys():
+        print(f" Eliminado: ", entry)
+
+# Cambios entre index y worktree
