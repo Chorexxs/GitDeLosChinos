@@ -1398,3 +1398,89 @@ def gitconfig_user_get(config):
         if "name" in config["user"] and "email" in config["user"]:
             return f"{config['user']} <{config['user']['email']}>"
     return None
+
+
+def tree_from_index(repo, index):
+    contents = dict()
+    contents = [""] = list()
+
+    for entry in index.entries:
+        dirname = os.path.dirname(entry.name)
+
+        key = dirname
+        while key != "":
+            if not key in contents:
+                contents[key] = list()
+            key = os. path.dirname(key)
+
+        contents[dirname].append(entry)
+
+    sorted_paths = sorted(contents.keys(), key=len, reverse=True)
+
+    sha = None
+
+    for path in sorted_paths:
+        tree = GitTree()
+
+        for entry in contents[path]:
+            if isinstance(entry, GitIndexEntry):
+                leaf_mode: f"{entry.mode_type:02o}{entry.mode_perms:04o}".encode(
+                    "ascii")
+                leaf = GitTreeLeaf(mode=leaf_mode, path=os.path.basename(
+                    entry.name), sha=entry.sha)
+            else:
+                leaf = GitTreeLeaf(mode=b"040000", path=entry[0], sha=entry[1])
+
+            tree.items.append(leaf)
+
+        sha = object_write(tree, repo)
+
+        parent = os.path.dirname(path)
+        base = os.path.basename(path)
+        contents[parent].append((base, sha))
+
+    return sha
+
+
+def commit_create(repo, tree, parent, author, timestamp, message):
+    commit = GitCommit()
+    commit.kvlm[b"tree"] = tree.encode("ascii")
+    if parent:
+        commit.kvlm[b"parent"] = parent.encode("ascii")
+
+    mesage = message.strip() + "\n"
+
+    offset = int(timestamp.astimezone().utcoffset().total_seconds())
+    hours = offset // 3600
+    minutes = (offset % 3600) // 60
+    tz = "{}{:02}{:02}".format("+" if offset > 0 else "-", hours, minutes)
+
+    author = author + timestamp.strftime(" %s ") + tz
+
+    commit.kvlm[b"author"] = author.encode("utf-8")
+    commit.kvlm[b"committer"] = author.encode("utf-8")
+    commit.kvlm[None] = message.encode("utf-8")
+
+    return object_write(commit, repo)
+
+
+def cmd_commit(args):
+    repo = repo_find()
+    index = index_read(repo)
+
+    tree = tree_from_index(repo, index)
+
+    commit = commit_create(repo,
+                           tree,
+                           object_find(repo, "HEAD"),
+                           gitconfig_user_get(gitconfig_read()),
+                           datetime.now(),
+                           args.message)
+
+    active_branch = branch_get_active(repo)
+    if active_branch:
+        with open(repo_file(repo, os.path.join("refs/heads", active_branch)), "w") as fd:
+            fd.write(commit + "\n")
+    else:
+        with open(repo_file(repo, "HEAD"), "w") as fd:
+            fd.write("\n")
