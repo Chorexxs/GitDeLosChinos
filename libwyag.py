@@ -405,6 +405,8 @@ def object_find(repo, name, fmt=None, follow=True):
             return None
 
 
+# EL COMANDO hash-object
+
 argsp = argsubparsers.add_parser("hash-object",
                                  help="Calcula el ID de un objeto y crea un "
                                  "blob de un archivo")
@@ -425,7 +427,7 @@ argsp.add_argument("path",
                    help="Lee el archivo desde <file>")
 
 
-def fcmd_hash_object(args):
+def cmd_hash_object(args):
     if args.write:
         repo = repo_find()
     else:
@@ -752,6 +754,12 @@ def ref_list(repo, path=None):
 
 argsp = argsubparsers.add_parser("show-ref",
                                  help="Muestra la lista de refs")
+
+
+def cmd_show_ref(args):
+    repo = repo_find()
+    refs = ref_list(repo)
+    show_ref(repo, refs, prefix="refs")
 
 
 def show_ref(repo, refs, with_hash=True, prefix=""):
@@ -1201,7 +1209,7 @@ def branch_get_active(repo):
         return False
 
 
-def branch_status_branch(repo):
+def cmd_status_branch(repo):
     branch = branch_get_active(repo)
     if branch:
         print(f"En la rama {branch}.")
