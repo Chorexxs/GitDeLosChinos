@@ -1,23 +1,32 @@
-import argparse
-import configparser
-from datetime import datetime
-import grp
-import pwd
-from fnmatch import fnmatch
-import hashlib
-from math import ceil
-import os
-import re
-import zlib
+# Importación de módulos necesarios para el funcionamiento del script
+import argparse  # Para manejar argumentos de línea de comandos
+import configparser  # Para manejar archivos de configuración
+from datetime import datetime  # Para manejar fechas y horas
+import grp  # Para obtener información de grupos del sistema
+import pwd  # Para obtener información de usuarios del sistema
+from fnmatch import fnmatch  # Para realizar coincidencias de patrones
+import hashlib  # Para calcular hashes (SHA-1)
+from math import ceil  # Para redondeo hacia arriba
+import os  # Para operaciones del sistema de archivos
+import re  # Para trabajar con expresiones regulares
+import zlib  # Para compresión y descompresión de datos
 
+# Configuración del analizador de argumentos de línea de comandos
 argparse = argparse.ArgumentParser(
-    description="Un seguidor de contenido de los Chinos")
-argsubparsers = argparse.add_subparsers(title="Comandos", dest="comando")
+    description="Un seguidor de contenido de los Chinos")  # Descripción del programa
+argsubparsers = argparse.add_subparsers(
+    title="Comandos", dest="comando")  # Subcomandos disponibles
+
+# Función principal que maneja los comandos proporcionados por el usuario
 
 
 def main(argv=sys.argv[1:]):
-    args = argparse.parse_args(argv)
-    match args.comando:
+    """
+    Función principal que analiza los argumentos de línea de comandos y ejecuta
+    el comando correspondiente.
+    """
+    args = argparse.parse_args(argv)  # Analiza los argumentos
+    match args.comando:  # Ejecuta el comando correspondiente
         case "add": cmd_add(args)
         case "cat-file": cmd_cat_file(args)
         case "check-ignore": cmd_check_ignore(args)
@@ -33,61 +42,97 @@ def main(argv=sys.argv[1:]):
         case "show-ref": cmd_show_ref(args)
         case "status": cmd_status(args)
         case "tag": cmd_tag(args)
+        # Mensaje de error si el comando no es válido
         case _: print("Comando no válido")
 
-# EL OBJETO REPOSITORIO
-# El objeto repositorio representa un repositorio de Git.
+# Clase que representa un repositorio de Git
 
 
 class GitRepository(object):
-    """Representa un repositorio de Git."""
-
-    worktree = None
-    gitdir = None
-    conf = None
+    """
+    Representa un repositorio de Git. Contiene información sobre el directorio
+    de trabajo, el directorio .git y la configuración del repositorio.
+    """
+    worktree = None  # Directorio de trabajo del repositorio
+    gitdir = None  # Directorio .git del repositorio
+    conf = None  # Configuración del repositorio
 
     def __init__(self, path, force=False):
+        """
+        Inicializa un repositorio de Git.
+
+        :param path: Ruta al directorio del repositorio
+        :param force: Si es True, fuerza la creación del repositorio
+        """
         self.worktree = path
         self.gitdir = os.path.join(path, ".git")
 
+        # Verifica si el directorio .git existe, a menos que se fuerce
         if not (force or os.path.isdir(self.gitdir)):
             raise Exception(f"No es un repositorio de Git válido: {path}")
 
-    # Lee el archivo de configuración en .git/config
-    self.conf = configparser.ConfigParser()
-    cf = repo_file(self, "config")
+        # Lee el archivo de configuración en .git/config
+        self.conf = configparser.ConfigParser()
+        cf = repo_file(self, "config")
 
-    if cf and os.path.exists(cf):
-        self, conf.read([cf])
-    elif not force:
-        raise Exception("Archivo de configuración no encontrado")
+        if cf and os.path.exists(cf):
+            self.conf.read([cf])
+        elif not force:
+            raise Exception("Archivo de configuración no encontrado")
 
-    if not force:
-        vers = int(self.conf.get("core", "repositoryformatversion"))
-        if vers != 0:
-            raise Exception(
-                f"Versión de formato de repositorio no soportada: {vers}")
+        # Verifica la versión del formato del repositorio
+        if not force:
+            vers = int(self.conf.get("core", "repositoryformatversion"))
+            if vers != 0:
+                raise Exception(
+                    f"Versión de formato de repositorio no soportada: {vers}")
+
+# Función para calcular la ruta absoluta de un archivo en el repositorio
 
 
 def repo_path(repo, *path):
-    """Calcula la ruta absoluta de un archivo en el repositorio."""
+    """
+    Calcula la ruta absoluta de un archivo en el repositorio.
+
+    :param repo: Instancia de GitRepository
+    :param path: Componentes de la ruta relativa
+    :return: Ruta absoluta
+    """
     return os.path.join(repo.gitdir, *path)
+
+# Función para calcular la ruta de un archivo y crear directorios si es necesario
 
 
 def repo_file(repo, *path, mkdir=False):
-    """Lo mismo que repo_path, pero crea el directorio *path si no existe."""
+    """
+    Calcula la ruta de un archivo en el repositorio y crea los directorios
+    necesarios si no existen.
 
+    :param repo: Instancia de GitRepository
+    :param path: Componentes de la ruta relativa
+    :param mkdir: Si es True, crea los directorios necesarios
+    :return: Ruta absoluta del archivo
+    """
     if repo_dir(repo, *path[:-1], mkdir=mkdir):
         return repo_path(repo, *path)
 
+# Función para calcular la ruta de un directorio y crearla si es necesario
+
 
 def repo_dir(repo, *path, mkdir=False):
-    """Lo mismo que repo_path, pero para directorios."""
+    """
+    Calcula la ruta de un directorio en el repositorio y crea el directorio
+    si no existe.
 
+    :param repo: Instancia de GitRepository
+    :param path: Componentes de la ruta relativa
+    :param mkdir: Si es True, crea el directorio si no existe
+    :return: Ruta absoluta del directorio
+    """
     path = repo_path(repo, *path)
 
     if os.path.exists(path):
-        if (os.path.isdir(path)):
+        if os.path.isdir(path):
             return path
         else:
             raise Exception(f"No es un directorio {path}")
@@ -98,14 +143,19 @@ def repo_dir(repo, *path, mkdir=False):
     else:
         return None
 
+# Función para crear un nuevo repositorio
+
 
 def repo_create(path):
-    """Crea un nuevo repositorio en path."""
+    """
+    Crea un nuevo repositorio en la ruta especificada.
 
+    :param path: Ruta donde se creará el repositorio
+    :return: Instancia de GitRepository
+    """
     repo = GitRepository(path, True)
 
-    # Primero se asegura que el path o no existe o es un dir vacío
-
+    # Verifica que el directorio sea válido
     if os.path.exists(repo.worktree):
         if not os.path.isdir(repo.worktree):
             raise Exception(f"{path} no es un directorio")
@@ -114,43 +164,50 @@ def repo_create(path):
     else:
         os.makedirs(repo.worktree)
 
+    # Crea los directorios y archivos necesarios
     assert repo_dir(repo, "branches", mkdir=True)
     assert repo_dir(repo, "objects", mkdir=True)
     assert repo_dir(repo, "refs", "tags", mkdir=True)
     assert repo_dir(repo, "refs", "heads", mkdir=True)
 
-    # .git/description es un archivo de texto que describe el repositorio
+    # Archivo de descripción
     with open(repo_file(repo, "descripción"), "w") as f:
         f.write(
             "repositorio sin nombre; edita el archivo 'descripción' para cambiarlo\n")
 
-    # .git/HEAD es un archivo de texto que contiene la referencia a la rama actual
+    # Archivo HEAD
     with open(repo_file(repo, "HEAD"), "w") as f:
         f.write("ref: refs/heads/master\n")
 
+    # Archivo de configuración
     with open(repo_file(repo, "config"), "w") as f:
         config = repo_default_config()
         config.write(f)
 
     return repo
 
+# Función para obtener la configuración por defecto del repositorio
+
 
 def repo_default_config():
-    """Devuelve la configuración por defecto del repositorio."""
+    """
+    Devuelve la configuración por defecto del repositorio.
+
+    :return: Configuración por defecto como instancia de ConfigParser
+    """
     ret = configparser.ConfigParser()
 
     ret.add_section("core")
     ret.set("core", "repositoryformatversion", "0")
-    ret.set("core", "filemode", "fasle")
+    ret.set("core", "filemode", "false")
     ret.set("core", "bare", "false")
 
     return ret
 
-# EL COMANDO INIT
 
-
+# Comando init para inicializar un nuevo repositorio
 argsp = argsubparsers.add_parser(
-    "init", help="Inicia un nuevo reporsitorio vacío")
+    "init", help="Inicia un nuevo repositorio vacío")
 
 argsp.add_argument("path",
                    metavar="directorio",
@@ -160,6 +217,11 @@ argsp.add_argument("path",
 
 
 def cmd_init(*args):
+    """
+    Comando para inicializar un nuevo repositorio vacío.
+
+    :param args: Argumentos de línea de comandos
+    """
     repo_create(args.path)
 
 # LA FUNCIÓN repo_find()
@@ -300,7 +362,46 @@ def cat_file(repo, obj, fmt=None):
 
 
 def object_find(repo, name, fmt=None, follow=True):
-    return name
+    """
+    Encuentra un objeto en el repositorio a partir de su nombre o referencia.
+
+    :param repo: Instancia de GitRepository
+    :param name: Nombre o referencia del objeto
+    :param fmt: Tipo de objeto esperado (opcional)
+    :param follow: Si es True, sigue referencias como tags o commits (opcional)
+    :return: SHA-1 del objeto encontrado
+    """
+    sha = object_resolve(repo, name)
+
+    if not sha:
+        raise Exception(f"Referencia no válida: {name}")
+
+    if len(sha) > 1:
+        raise Exception(
+            f"Referencia ambigua {name}: Los candidatos son:\n - {'\n - '.join(sha)}.")
+
+    sha = sha[0]
+
+    if not fmt:
+        return sha
+
+    while True:
+        obj = object_read(repo, sha)
+
+        if obj.fmt == fmt:
+            return sha
+
+        if not follow:
+            return None
+
+        if obj.fmt == b"tag":
+            # Si es un tag, sigue la referencia al objeto apuntado
+            sha = obj.kvlm[b"object"].decode("ascii")
+        elif obj.fmt == b"commit" and fmt == b"tree":
+            # Si es un commit, sigue la referencia al árbol
+            sha = obj.kvlm[b"tree"].decode("ascii")
+        else:
+            return None
 
 
 argsp = argsubparsers.add_parser("hash-object",
@@ -334,7 +435,7 @@ def fcmd_hash_object(args):
         print(sha)
 
 
-def object_hash(fd, fmt, repor=None):
+def object_hash(fd, fmt, repo=None):
     """Objeto hash, escrito en el repo si se provee"""
     data = fd.read()
 
@@ -767,6 +868,15 @@ def object_resolve(repo, name):
 
 
 def object_find(repo, name, fmt=None, follow=True):
+    """
+    Encuentra un objeto en el repositorio a partir de su nombre o referencia.
+
+    :param repo: Instancia de GitRepository
+    :param name: Nombre o referencia del objeto
+    :param fmt: Tipo de objeto esperado (opcional)
+    :param follow: Si es True, sigue referencias como tags o commits (opcional)
+    :return: SHA-1 del objeto encontrado
+    """
     sha = object_resolve(repo, name)
 
     if not sha:
@@ -774,7 +884,7 @@ def object_find(repo, name, fmt=None, follow=True):
 
     if len(sha) > 1:
         raise Exception(
-            f"Referencia ambigua {name}: Los candidatos son:\r - {'\n - '.join(sha)}.")
+            f"Referencia ambigua {name}: Los candidatos son:\n - {'\n - '.join(sha)}.")
 
     sha = sha[0]
 
@@ -791,8 +901,10 @@ def object_find(repo, name, fmt=None, follow=True):
             return None
 
         if obj.fmt == b"tag":
+            # Si es un tag, sigue la referencia al objeto apuntado
             sha = obj.kvlm[b"object"].decode("ascii")
         elif obj.fmt == b"commit" and fmt == b"tree":
+            # Si es un commit, sigue la referencia al árbol
             sha = obj.kvlm[b"tree"].decode("ascii")
         else:
             return None
@@ -964,7 +1076,7 @@ def cmd_ls_files(args):
         print(
             f"Formato del archivo en el Index v{index.version}, contiene {len(index.entries)} entradas")
 
-    for e in indec.entries:
+    for e in index.entries:
         print(e.name)
         if args.verbose:
             entry_type = {0b1000: "regular",
@@ -972,7 +1084,8 @@ def cmd_ls_files(args):
                           0b1110: "git link"}[e.mode_type]
             print(f"{entry_type} con permisos: {e.mode_perms:o}")
             print(f"En blob: {e.sha}")
-            print(f"Creado {datetime.fromtimestamp(e.ctime[0])}.{e.ctime[1]}, modificado: {datetime.fromtimestamp(e.mtime[0])}.{e.mtime{1}}")
+            print(
+                f"Creado {datetime.fromtimestamp(e.ctime[0])}.{e.ctime[1]}, modificado: {datetime.fromtimestamp(e.mtime[0])}.{e.mtime[1]}")
             print(f"Dispositivo: {e.dev}, inodo: {e.ino}")
             print(
                 f"Usuario: {pwd.getpwuid(e.uid).pw_name} ({e.uid} grupo: {grp.getgrgid(e.gid).gr_name} ({e.gid}))")
@@ -1225,49 +1338,48 @@ def cmd_status_index_worktree(repo, index):
 
 
 def index_write(repo, index):
+    """
+    Escribe el índice del repositorio en el archivo correspondiente.
+
+    :param repo: Instancia de GitRepository
+    :param index: Instancia de GitIndex que contiene las entradas del índice
+    """
     with open(repo_file(repo, "index"), "wb") as f:
+        # Escribe la cabecera del índice
+        f.write(b"DIRC")  # Firma del índice
+        f.write(index.version.to_bytes(4, "big"))  # Versión del índice
+        f.write(len(index.entries).to_bytes(4, "big"))  # Número de entradas
 
-        f.write(b"DIRC")
-        f.write(index.version.to_bytes(4, "big"))
-        f.write(len(index.entries).to_bytes(4, "big"))
-
-        idx = 0
+        # Escribe cada entrada del índice
         for e in index.entries:
-            f.write(e.ctime[0].to_bytes(4, "big"))
-            f.write(e.ctime[1].to_bytes(4, "big"))
-            f.write(e.mtime[0].to_bytes(4, "big"))
-            f.write(e.mtime[1].to_bytes(4, "big"))
-            f.write(e.dev.to_bytes(4, "big"))
-            f.write(e.ino.to_bytes(4, "big"))
+            f.write(e.ctime[0].to_bytes(4, "big"))  # ctime (segundos)
+            f.write(e.ctime[1].to_bytes(4, "big"))  # ctime (nanosegundos)
+            f.write(e.mtime[0].to_bytes(4, "big"))  # mtime (segundos)
+            f.write(e.mtime[1].to_bytes(4, "big"))  # mtime (nanosegundos)
+            f.write(e.dev.to_bytes(4, "big"))  # ID del dispositivo
+            f.write(e.ino.to_bytes(4, "big"))  # Número de inodo
 
+            # Calcula y escribe el modo del archivo
             mode = (e.mode_type << 12) | e.mode_perms
             f.write(mode.to_bytes(4, "big"))
 
-            f.write(e.uid.to_bytes(4, "big"))
-            f.write(e.gid.to_bytes(4, "big"))
-            f.write(e.fsize.to_bytes(4, "big"))
-            f.write(int(e.sha, 16).to_bytes(20, "big"))
+            f.write(e.uid.to_bytes(4, "big"))  # ID del usuario
+            f.write(e.gid.to_bytes(4, "big"))  # ID del grupo
+            f.write(e.fsize.to_bytes(4, "big"))  # Tamaño del archivo
+            f.write(int(e.sha, 16).to_bytes(20, "big"))  # SHA-1 del objeto
 
+            # Calcula y escribe los flags
             flag_assume_valid = 0x1 << 15 if e.flag_assume_valid else 0
-
             name_bytes = e.name.encode("utf-8")
-            bytes_len = len(name_bytes)
-            if bytes_len >= 0xFFF:
-                name_length = 0xFFF
-            else:
-                name_length = bytes_len
-
+            name_length = len(name_bytes) if len(name_bytes) < 0xFFF else 0xFFF
             f.write((flag_assume_valid | e.flag_stage |
                     name_length).to_bytes(2, "big"))
-            f.write(name_bytes)
-            f.write((0).to_bytes(1, "big"))
+            f.write(name_bytes)  # Nombre del archivo
+            f.write(b"\x00")  # Byte nulo para terminar el nombre
 
-            idx += 62 + len(name_bytes) + 1
-
-            if idx % 8 != 0:
-                pad = 8 - (idx % 8)
-                f.write((0).to_bytes(pad, "big"))
-                idx += pad
+            # Alinea la entrada a un múltiplo de 8 bytes
+            padding = (8 - (f.tell() % 8)) % 8
+            f.write(b"\x00" * padding)
 
 # EL COMANDO rm
 
