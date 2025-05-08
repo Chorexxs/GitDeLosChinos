@@ -217,7 +217,7 @@ argsp.add_argument("path",
                    help="Donde crear el repositorio.")
 
 
-def cmd_init(*args):
+def cmd_init(args):
     """
     Comando para inicializar un nuevo repositorio vacío.
 
@@ -868,48 +868,6 @@ def object_resolve(repo, name):
     return candidates
 
 
-def object_find(repo, name, fmt=None, follow=True):
-    """
-    Encuentra un objeto en el repositorio a partir de su nombre o referencia.
-
-    :param repo: Instancia de GitRepository
-    :param name: Nombre o referencia del objeto
-    :param fmt: Tipo de objeto esperado (opcional)
-    :param follow: Si es True, sigue referencias como tags o commits (opcional)
-    :return: SHA-1 del objeto encontrado
-    """
-    sha = object_resolve(repo, name)
-
-    if not sha:
-        raise Exception(f"Referencia no válida: {name}")
-
-    if len(sha) > 1:
-        raise Exception(
-            f"Referencia ambigua {name}: Los candidatos son:\n - {'\n - '.join(sha)}.")
-
-    sha = sha[0]
-
-    if not fmt:
-        return sha
-
-    while True:
-        obj = object_read(repo, sha)
-
-        if obj.fmt == fmt:
-            return sha
-
-        if not follow:
-            return None
-
-        if obj.fmt == b"tag":
-            # Si es un tag, sigue la referencia al objeto apuntado
-            sha = obj.kvlm[b"object"].decode("ascii")
-        elif obj.fmt == b"commit" and fmt == b"tree":
-            # Si es un commit, sigue la referencia al árbol
-            sha = obj.kvlm[b"tree"].decode("ascii")
-        else:
-            return None
-
 # EL COMANDO rev-parse
 
 
@@ -1148,7 +1106,7 @@ def gitignore_read(repo):
     ret = GitIgnore(absolute=list(), scoped=list())
 
     repo_file = os.path.join(repo.gitdir, "info/exclude")
-    if os.path.exsists(repo_file):
+    if os.path.exists(repo_file):
         with open(repo_file, "r") as f:
             ret.absolute.append(gitignore_parse(f.readlines()))
 
@@ -1308,7 +1266,7 @@ def cmd_status_index_worktree(repo, index):
     for entry in index.entries:
         full_path = os.path.join(repo.worktree, entry.name)
 
-        if not os.path.exsist(full_path):
+        if not os.path.exists(full_path):
             print(" Eliminado: ", entry.name)
         else:
             stat = os.stat(full_path)
