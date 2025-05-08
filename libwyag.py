@@ -10,6 +10,7 @@ from math import ceil  # Para redondeo hacia arriba
 import os  # Para operaciones del sistema de archivos
 import re  # Para trabajar con expresiones regulares
 import zlib  # Para compresión y descompresión de datos
+import sys  # Para manejar argumentos de línea de comandos y salida estándar
 
 # Configuración del analizador de argumentos de línea de comandos
 argparse = argparse.ArgumentParser(
@@ -445,7 +446,7 @@ def object_hash(fd, fmt, repo=None):
         case b"tree": obj = GitTree(data)
         case b"tag": obj = GitTag(data)
         case b"blob": obj = GitBlob(data)
-        case _ = rasie Exception(f"Tipo desconocido {fmt}!")
+        case _: raise Exception(f"Tipo desconocido {fmt}!")
 
     return object_write(obj, repo)
 
@@ -689,7 +690,7 @@ def cmd_checkout(args):
 
     obj = object_read(repo, object_find(repo, args.commit))
 
-    # Si el objeto es un commit, botiene el tree
+    # Si el objeto es un commit, obtiene el tree
     if obj.fmt == b"commit":
         obj = object_read(repo, obj.kvlm[b"tree"].decode("ascii"))
 
@@ -1276,13 +1277,13 @@ def cmd_status_head_index(repo, index):
     for entry in index.entries:
         if entry.name in head:
             if head[entry.name] != entry.sha:
-                print(f" modificado:", entry.name)
+                print(" modificado:", entry.name)
             del head[entry.name]
         else:
-            print(f" Añadiddo: ", entry.name)
+            print(" Añadiddo: ", entry.name)
 
     for entry in head.keys():
-        print(f" Eliminado: ", entry)
+        print(" Eliminado: ", entry)
 
 # Cambios entre index y worktree
 
@@ -1307,8 +1308,8 @@ def cmd_status_index_worktree(repo, index):
     for entry in index.entries:
         full_path = os.path.join(repo.worktree, entry.name)
 
-        if not os.path.exsists(full_path):
-            print(f" Eliminado: ", entry.name)
+        if not os.path.exsist(full_path):
+            print(" Eliminado: ", entry.name)
         else:
             stat = os.stat(full_path)
 
@@ -1320,7 +1321,7 @@ def cmd_status_index_worktree(repo, index):
                     same = entry.sha == new_sha
 
                     if not same:
-                        print(f" Modificado: ", entry.name)
+                        print(" Modificado: ", entry.name)
 
         if entry.name in all_files:
             all_files.remove(entry.name)
@@ -1514,7 +1515,7 @@ def gitconfig_user_get(config):
 
 def tree_from_index(repo, index):
     contents = dict()
-    contents = [""] = list()
+    contents[""] = list()
 
     for entry in index.entries:
         dirname = os.path.dirname(entry.name)
@@ -1536,7 +1537,7 @@ def tree_from_index(repo, index):
 
         for entry in contents[path]:
             if isinstance(entry, GitIndexEntry):
-                leaf_mode: f"{entry.mode_type:02o}{entry.mode_perms:04o}".encode(
+                leaf_mode = f"{entry.mode_type:02o}{entry.mode_perms:04o}".encode(
                     "ascii")
                 leaf = GitTreeLeaf(mode=leaf_mode, path=os.path.basename(
                     entry.name), sha=entry.sha)
