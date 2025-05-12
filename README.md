@@ -5,7 +5,7 @@
 
 ---
 
-## 🚀 Características implementadas
+## Características implementadas
 
 - ✅ `add` – Añade archivos al índice (staging area)
 - ✅ `rm` – Elimina archivos del índice y del directorio de trabajo
@@ -31,16 +31,14 @@
 
 ---
 
-## 🧪 Requisitos
+## Requisitos
 
 - Python 3.8+
 - Sin dependencias externas (uso exclusivo de la librería estándar)
 
 ---
 
----
-
-## 👤 Configuración del usuario
+## Configuración del usuario
 
 GitDeLosChinos lee la configuración del usuario desde `~/.gitconfig` o `~/.config/git/config`. Asegúrate de tener algo como:
 
@@ -77,8 +75,8 @@ MIT License © 2025 — [@Chorexxs]
 
 ---
 
-## 🧑‍💻 Autor
+## Autor
 
-- 💼 [LinkedIn](https://www.linkedin.com/in/oswaldo-fonseca-gonzalez/)
-- 🧑‍💻 [GitHub](https://github.com/Chorexxs)
-- 🌐 [Portafolio](https://chorexxs-portfolio.dev/)
+- [LinkedIn](https://www.linkedin.com/in/oswaldo-fonseca-gonzalez/)
+- [GitHub](https://github.com/Chorexxs)
+- [Portafolio](https://chorexxs-portfolio.dev/)
